@@ -1,103 +1,117 @@
-import Image from "next/image";
+'use client';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
-export default function Home() {
+type Cabinet = any;
+
+export default function CabinetListPage(){
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  const q = searchParams.get('q') || '';
+  const status = searchParams.get('status') || '';
+  const sort = searchParams.get('sort') || 'swap_desc';
+  const page = parseInt(searchParams.get('page')||'1');
+
+  const [data,setData] = useState<Cabinet[]>([]);
+  const [meta,setMeta] = useState<any>(null);
+  const [loading,setLoading] = useState(true);
+  const [error,setError] = useState('');
+  const [inputQ,setInputQ] = useState(q);
+
+  const fetchData = async () => {
+    setLoading(true); setError('');
+    try{
+      const url = `/api/cabinets?q=${encodeURIComponent(q)}&status=${status}&sort=${sort}&page=${page}&limit=10`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if(!json.success) throw new Error(json.error);
+      setData(json.data);
+      setMeta(json.meta);
+    }catch(e:any){ setError(e.message); }
+    finally{ setLoading(false); }
+  };
+
+  useEffect(()=>{ fetchData(); }, [q,status,sort,page]);
+  useEffect(()=>{ setInputQ(q); },[q]);
+
+  const updateParams = (patch:Record<string,string>)=>{
+    const p = new URLSearchParams(searchParams.toString());
+    Object.entries(patch).forEach(([k,v])=>{
+      if(!v) p.delete(k); else p.set(k,v);
+    });
+    if(patch.q!==undefined || patch.status!==undefined || patch.sort!==undefined) p.set('page','1');
+    router.push(`/?${p.toString()}`);
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="min-h-screen bg-gray-50 p-6 font-sans">
+      <h1 className="text-3xl font-extrabold">🔋 Battery Swap Monitoring</h1>
+      <p className="text-gray-500 mt-1">Internal ops dashboard - {meta?.total || 0} cabinets</p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Controls */}
+      <div className="mt-6 flex flex-wrap gap-3 bg-white p-4 rounded-xl border">
+        <input
+          value={inputQ}
+          onChange={e=>setInputQ(e.target.value)}
+          onKeyDown={e=> e.key==='Enter' && updateParams({q:inputQ})}
+          placeholder="Cari kode / cabang..."
+          className="border px-3 py-2 rounded-lg w-64"
+        />
+        <button onClick={()=>updateParams({q:inputQ})} className="bg-black text-white px-4 py-2 rounded-lg">Search</button>
+        
+        <select value={status} onChange={e=>updateParams({status:e.target.value})} className="border px-3 py-2 rounded-lg">
+          <option value="">All Status</option>
+          <option value="ONLINE">ONLINE</option>
+          <option value="OFFLINE">OFFLINE</option>
+          <option value="MAINTENANCE">MAINTENANCE</option>
+        </select>
+
+        <select value={sort} onChange={e=>updateParams({sort:e.target.value})} className="border px-3 py-2 rounded-lg">
+          <option value="swap_desc">Swap Terbanyak</option>
+          <option value="swap_asc">Swap Tersedikit</option>
+          <option value="code_asc">Kode A-Z</option>
+          <option value="heartbeat_desc">Heartbeat Terbaru</option>
+        </select>
+      </div>
+
+      {/* States */}
+      {loading && <div className="mt-8 bg-white p-8 rounded-xl text-center">Loading cabinets... ⏳</div>}
+      {error && <div className="mt-8 bg-red-50 border border-red-200 p-8 rounded-xl text-center text-red-600">Error: {error} ❌</div>}
+      {!loading && !error && data.length===0 && <div className="mt-8 bg-white p-8 rounded-xl text-center">No cabinets found. Coba ubah filter 🔍</div>}
+
+      {!loading && !error && data.length>0 && (
+        <>
+        <div className="mt-6 bg-white rounded-xl border overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-100 text-left">
+              <tr><th className="p-3">Kode</th><th className="p-3">Cabang</th><th className="p-3">Status</th><th className="p-3">Slot</th><th className="p-3">Swap 24h</th><th className="p-3">Last HB</th></tr>
+            </thead>
+            <tbody>
+              {data.map((c:any)=>(
+                <tr key={c.id} className="border-t hover:bg-gray-50">
+                  <td className="p-3 font-bold"><Link href={`/cabinet/${c.id}`} className="text-blue-600 hover:underline">{c.code}</Link></td>
+                  <td className="p-3">{c.branch}</td>
+                  <td className="p-3"><span className={`px-2 py-1 rounded-full text-xs ${c.status==='ONLINE'?'bg-green-100 text-green-700':c.status==='OFFLINE'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}`}>{c.status}</span></td>
+                  <td className="p-3">{c.full_count}/{c.total_slots}</td>
+                  <td className="p-3 font-semibold">{c.swaps_24h}</td>
+                  <td className="p-3 text-gray-500 text-xs">{new Date(c.last_heartbeat).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="mt-4 flex justify-between items-center">
+          <div className="text-sm text-gray-500">Page {meta.page} of {meta.totalPages} - {meta.total} total</div>
+          <div className="flex gap-2">
+            <button disabled={!meta.hasPrev} onClick={()=>updateParams({page:String(page-1)})} className="px-4 py-2 border rounded-lg disabled:opacity-30 bg-white">Prev</button>
+            <button disabled={!meta.hasNext} onClick={()=>updateParams({page:String(page+1)})} className="px-4 py-2 border rounded-lg disabled:opacity-30 bg-white">Next</button>
+          </div>
+        </div>
+        </>
+      )}
     </div>
-  );
+  )
 }
