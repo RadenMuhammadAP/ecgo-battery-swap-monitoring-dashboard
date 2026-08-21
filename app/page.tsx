@@ -1,14 +1,15 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 type Cabinet = any;
 
-export default function CabinetListPage(){
+// Pindahkan semua logic yang pake useSearchParams ke sini
+function DashboardContent(){
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const q = searchParams.get('q') || '';
   const status = searchParams.get('status') || '';
   const sort = searchParams.get('sort') || 'swap_desc';
@@ -50,7 +51,6 @@ export default function CabinetListPage(){
       <h1 className="text-3xl font-extrabold">🔋 Battery Swap Monitoring</h1>
       <p className="text-gray-500 mt-1">Internal ops dashboard - {meta?.total || 0} cabinets</p>
 
-      {/* Controls */}
       <div className="mt-6 flex flex-wrap gap-3 bg-white p-4 rounded-xl border">
         <input
           value={inputQ}
@@ -60,7 +60,7 @@ export default function CabinetListPage(){
           className="border px-3 py-2 rounded-lg w-64"
         />
         <button onClick={()=>updateParams({q:inputQ})} className="bg-black text-white px-4 py-2 rounded-lg">Search</button>
-        
+
         <select value={status} onChange={e=>updateParams({status:e.target.value})} className="border px-3 py-2 rounded-lg">
           <option value="">All Status</option>
           <option value="ONLINE">ONLINE</option>
@@ -76,12 +76,11 @@ export default function CabinetListPage(){
         </select>
       </div>
 
-      {/* States */}
       {loading && <div className="mt-8 bg-white p-8 rounded-xl text-center">Loading cabinets... ⏳</div>}
       {error && <div className="mt-8 bg-red-50 border border-red-200 p-8 rounded-xl text-center text-red-600">Error: {error} ❌</div>}
-      {!loading && !error && data.length===0 && <div className="mt-8 bg-white p-8 rounded-xl text-center">No cabinets found. Coba ubah filter 🔍</div>}
+      {!loading &&!error && data.length===0 && <div className="mt-8 bg-white p-8 rounded-xl text-center">No cabinets found. Coba ubah filter 🔍</div>}
 
-      {!loading && !error && data.length>0 && (
+      {!loading &&!error && data.length>0 && (
         <>
         <div className="mt-6 bg-white rounded-xl border overflow-hidden">
           <table className="w-full text-sm">
@@ -113,5 +112,14 @@ export default function CabinetListPage(){
         </>
       )}
     </div>
+  )
+}
+
+// INI YANG BIKIN HIJAU - WRAPPER SUSPENSE
+export default function CabinetListPage(){
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 p-8 text-center">Loading dashboard ECGO... 🔋</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }
