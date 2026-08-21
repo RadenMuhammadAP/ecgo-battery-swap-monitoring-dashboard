@@ -1,12 +1,18 @@
 # 🔋 Battery Swap Monitoring Dashboard
 
-Mini internal dashboard untuk tim operasional memantau cabinet battery swap. Dibuat untuk technical assignment.
+Mini internal dashboard untuk tim operasional memantau cabinet battery swap. Dibuat untuk technical assignment ECGO.
 
 **Live:** http://localhost:3001
 **Stack:** Next.js 15 App Router, TypeScript, TailwindCSS, Neon PostgreSQL, Recharts, Zod
 
-## 🚀 Cara Setup & Run
+## ✨ Fitur Implementasi
+- **Cabinet List** - Map & status ONLINE/OFFLINE
+- **Cabinet Detail `/cabinet/[id]`** - 12 slot real-time
+    - FULL = hijau (90-100%), CHARGING = kuning, LOCKED/FAULT = merah
+- **Swap Chart 24h** - Recharts bar chart
+- **20 Transaksi Terakhir** - Out/In battery & SoC
 
+## 🚀 Cara Setup & Run
 ```bash
 # 1. Clone & install
 npm install
